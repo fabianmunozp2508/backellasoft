@@ -1,0 +1,7 @@
+{
+  "mongoURI": "mongodb://localhost:27017/ellasoft",
+  "postgresURI": "postgres://ellasoft:3llasoft1@localhost:5433/ellasoft",
+  "jwtSecret": "yourSecretKey",
+  "recaptchaSecretKey": "6Lf0n_8pAAAAAKBn_Hx7ySG2jiV6DJHOJCSFVkfW"
+}
+
