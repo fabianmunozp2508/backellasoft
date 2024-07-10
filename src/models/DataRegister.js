@@ -1,22 +1,60 @@
+// models/DataRegister.js
 const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
 
-const dataRegisterSchema = new mongoose.Schema({
+const DataRegisterSchema = new Schema({
   userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    type: String,
     required: true
   },
-  name: String,
-  lastName: String,
-  address: String,
-  phoneNumber: String,
-  documentType: String,
-  documentNumber: String,
-  expeditionDepartment: String,
-  expeditionCity: String,
-  birthDate: Date,
-  photo: String,
-  matriculationDate: Date
+  email: {
+    type: String,
+    required: true
+  },
+  name: {
+    type: String,
+    required: true
+  },
+  lastName: {
+    type: String,
+    required: true
+  },
+  address: {
+    type: String,
+    required: true
+  },
+  phoneNumber: {
+    type: String,
+    required: true
+  },
+  documentType: {
+    type: String,
+    required: true
+  },
+  documentNumber: {
+    type: String,
+    required: true
+  },
+  expeditionDepartment: {
+    type: String,
+    required: true
+  },
+  expeditionCity: {
+    type: String,
+    required: true
+  },
+  birthDate: {
+    type: Date,
+    required: true
+  },
+  photo: {
+    type: String,
+    required: true
+  },
+  matriculationDate: {
+    type: Date,
+    required: true
+  }
 });
 
-module.exports = mongoose.model('DataRegister', dataRegisterSchema);
+module.exports = mongoose.model('DataRegister', DataRegisterSchema);

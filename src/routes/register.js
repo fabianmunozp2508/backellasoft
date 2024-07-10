@@ -1,17 +1,20 @@
 const express = require('express');
 const router = express.Router();
-const { check } = require('express-validator');
+const { check, validationResult } = require('express-validator');
 const registerController = require('../controllers/registerController');
 const multer = require('multer');
 const path = require('path');
+const crypto = require('crypto');
 
-// Configurar multer para la carga de archivos
+// Configurar multer para la carga de archivos con nombres únicos
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/');
+    cb(null, path.join(__dirname, '../uploads')); // Asegurar que la ruta es correcta
   },
   filename: function (req, file, cb) {
-    cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
+    // Generar un nombre único utilizando un hash
+    const uniqueSuffix = Date.now() + '-' + crypto.randomBytes(6).toString('hex');
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
   }
 });
 
@@ -50,31 +53,7 @@ router.post(
     check('expeditionCity', 'Expedition city is required').not().isEmpty().trim().escape(),
     check('birthDate', 'Birth date is required').not().isEmpty().isISO8601().toDate(),
     check('matriculationDate', 'Matriculation date is required').not().isEmpty().isISO8601().toDate(),
-    check('fatherName', 'Father name is required').not().isEmpty().trim().escape(),
-    check('motherName', 'Mother name is required').not().isEmpty().trim().escape(),
-    check('siblings', 'Number of siblings is required').isInt({ min: 0 }),
-    check('livingWith', 'Living with is required').not().isEmpty().trim().escape(),
-    check('stratum', 'Stratum is required').not().isEmpty().trim().escape(),
-    check('residenceAddress', 'Residence address is required').not().isEmpty().trim().escape(),
-    check('previousSchool', 'Previous school is required').not().isEmpty().trim().escape(),
-    check('academicReport', 'Academic report is required').not().isEmpty().trim().escape(),
-    check('sedeMatricula', 'Sede matricula is required').not().isEmpty().trim().escape(),
-    check('studentFromPreviousInstitution', 'Student from previous institution is required').isBoolean(),
-    check('repeatAcademicYear', 'Repeat academic year is required').isBoolean(),
-    check('hasAllergy', 'Has allergy is required').isBoolean(),
-    check('allergy', 'Allergy is required').optional().trim().escape(),
-    check('bloodType', 'Blood type is required').not().isEmpty().trim().escape(),
-    check('hasDisease', 'Has disease is required').isBoolean(),
-    check('disease', 'Disease is required').optional().trim().escape(),
-    check('medicalExam', 'Medical exam is required').not().isEmpty().trim().escape(),
-    check('grade', 'Grade is required').not().isEmpty().trim().escape(),
-    check('tutors', 'Tutors are required').isArray(),
-    check('tutors.*.name', 'Tutor name is required').not().isEmpty().trim().escape(),
-    check('tutors.*.lastName', 'Tutor last name is required').not().isEmpty().trim().escape(),
-    check('tutors.*.email', 'Tutor email is required').isEmail().normalizeEmail(),
-    check('tutors.*.relation', 'Tutor relation is required').not().isEmpty().trim().escape(),
-    check('tutors.*.relationOther', 'Tutor relation other is optional').optional().trim().escape(),
-    check('tutors.*.photo', 'Tutor photo is required').optional().trim().escape()
+    // Agrega cualquier otro campo de validación necesario
   ],
   (req, res, next) => {
     const errors = validationResult(req);

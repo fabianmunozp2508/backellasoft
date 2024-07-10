@@ -1,79 +1,83 @@
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+// models/User.js
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/db_postgres');
 
-const userSchema = new mongoose.Schema({
+const User = sequelize.define('User', {
   name: {
-    type: String,
-    required: true
+    type: DataTypes.STRING,
+    allowNull: false
   },
   lastName: {
-    type: String,
-    required: true
+    type: DataTypes.STRING,
+    allowNull: false
   },
   email: {
-    type: String,
-    required: true,
+    type: DataTypes.STRING,
+    allowNull: false,
     unique: true
   },
   password: {
-    type: String,
-    required: true
+    type: DataTypes.STRING,
+    allowNull: false
   },
   address: {
-    type: String,
-    required: true
+    type: DataTypes.STRING,
+    allowNull: false
   },
   phoneNumber: {
-    type: String,
-    required: true
+    type: DataTypes.STRING,
+    allowNull: false
   },
   documentType: {
-    type: String,
-    required: true
+    type: DataTypes.STRING,
+    allowNull: false
   },
   documentNumber: {
-    type: String,
-    required: true
+    type: DataTypes.STRING,
+    allowNull: false
   },
   expeditionDepartment: {
-    type: String,
-    required: true
+    type: DataTypes.STRING,
+    allowNull: false
   },
   expeditionCity: {
-    type: String,
-    required: true
+    type: DataTypes.STRING,
+    allowNull: false
   },
   birthDate: {
-    type: Date,
-    required: true
+    type: DataTypes.DATE,
+    allowNull: false
   },
   photo: {
-    type: String,
-    required: true
+    type: DataTypes.STRING,
+    allowNull: false
   },
   matriculationDate: {
-    type: Date,
-    required: true
+    type: DataTypes.DATE,
+    allowNull: false
   },
   role: {
-    type: String,
-    default: 'user'
+    type: DataTypes.STRING,
+    defaultValue: 'user'
   },
   date: {
-    type: Date,
-    default: Date.now
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW
+  }
+}, {
+  timestamps: true,
+  hooks: {
+    beforeCreate: async (user) => {
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(user.password, salt);
+    },
+    beforeUpdate: async (user) => {
+      if (user.changed('password')) {
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(user.password, salt);
+      }
+    }
   }
 });
 
-// Encriptar la contraseña antes de guardar el usuario
-userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) {
-    return next();
-  }
-
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-  next();
-});
-
-module.exports = mongoose.model('User', userSchema);
+module.exports = User;

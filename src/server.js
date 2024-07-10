@@ -1,19 +1,20 @@
 process.env.NODE_CONFIG_DIR = __dirname + '/config';
+require('dotenv').config(); // Asegúrate de que esto esté al principio del archivo
 
-require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const connectDB = require('./config/db');
-const connectPostgres = require('./config/db_postgres');
+const helmet = require('helmet');
+const mongoSanitize = require('express-mongo-sanitize');
+const rateLimit = require('express-rate-limit');
 const logger = require('./utils/logger');
 const path = require('path');
-const rateLimit = require('express-rate-limit');
-const mongoSanitize = require('express-mongo-sanitize');
-const helmet = require('helmet');
-require('express-async-errors');
+const connectDB = require('./config/db'); // Importar la conexión a MongoDB
 
 const app = express();
+
+// Conectar a MongoDB
+connectDB();
 
 // Middlewares
 app.use(bodyParser.json());
@@ -28,32 +29,29 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// Carpeta para las subidas de archivos
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Conectar a las bases de datos
-connectDB();
-connectPostgres();
-
-// Definir una ruta de prueba
-app.get('/', (req, res) => res.send('API Running'));
-
-// Definir rutas de la API
+// Rutas
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/prematriculados', require('./routes/prematriculados'));
 app.use('/api/register', require('./routes/register'));
-app.use('/api/config', require('./routes/config'));
-// app.use('/api/users', require('./routes/users'));
-
+app.use('/api/upload', require('./routes/upload'));
 // Manejo de errores global
 app.use((err, req, res, next) => {
   logger.error(err.message);
-  if (err instanceof multer.MulterError) {
-    return res.status(400).json({ message: 'File upload error' });
-  }
   res.status(500).json({ message: 'Server Error' });
 });
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   logger.info(`Server is running on port ${PORT}`);
+});
+
+// Sincronizar modelos
+const sequelize = require('./config/db_postgres');
+const User = require('./models/User');
+
+sequelize.sync().then(() => {
+  console.log('PostgreSQL synchronized');
+}).catch(err => {
+  console.error('Error synchronizing PostgreSQL:', err);
 });

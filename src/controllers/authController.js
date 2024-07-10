@@ -1,31 +1,23 @@
-const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const config = require('config');
-const axios = require('axios');
-
-// Verificar reCAPTCHA
-async function verifyRecaptcha(token) {
-  const secret = config.get('recaptchaSecretKey');
-  const response = await axios.post(`https://www.google.com/recaptcha/api/siteverify?secret=${secret}&response=${token}`);
-  return response.data.success;
-}
+const { Pool } = require('pg');
+const pool = new Pool({ connectionString: config.get('postgresURI') });
 
 exports.login = async (req, res) => {
-  const { email, password, recaptchaToken } = req.body;
+  const { email, password } = req.body;
 
   try {
-    // Verificar reCAPTCHA
-    const recaptchaValid = await verifyRecaptcha(recaptchaToken);
-    if (!recaptchaValid) {
-      return res.status(400).json({ message: 'Invalid reCAPTCHA' });
+    // Verificar si el usuario existe en PostgreSQL
+    const client = await pool.connect();
+    const result = await client.query('SELECT * FROM Users WHERE email = $1', [email]);
+    client.release();
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({ message: 'User not registered' });
     }
 
-    // Verificar si el usuario existe
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ message: 'Invalid credentials' });
-    }
+    const user = result.rows[0];
 
     // Verificar la contraseña
     const isMatch = await bcrypt.compare(password, user.password);

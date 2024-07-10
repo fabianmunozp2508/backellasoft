@@ -1,18 +1,16 @@
 const User = require('../models/User');
-const FamilyInfo = require('../models/FamilyInfo');
-const UploadFile = require('../models/UploadFile');
-const AdditionalInfo = require('../models/AdditionalInfo');
-const Tutor = require('../models/Tutor');
 const DataRegister = require('../models/DataRegister');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const config = require('config');
 const { validationResult } = require('express-validator');
-const path = require('path');
+const { Pool } = require('pg');
+const pool = new Pool({ connectionString: config.get('postgresURI') });
 
 exports.register = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    console.log('Validation errors:', errors.array());
     return res.status(400).json({ errors: errors.array() });
   }
 
@@ -29,50 +27,37 @@ exports.register = async (req, res) => {
     expeditionCity,
     birthDate,
     matriculationDate,
-    fatherName,
-    motherName,
-    siblings,
-    livingWith,
-    stratum,
-    residenceAddress,
-    previousSchool,
-    academicReport,
-    sedeMatricula,
-    studentFromPreviousInstitution,
-    repeatAcademicYear,
-    hasAllergy,
-    allergy,
-    bloodType,
-    hasDisease,
-    disease,
-    medicalExam,
-    grade,
-    tutors
+    photoUrl
   } = req.body;
 
+  console.log('Request body:', req.body);
+
   try {
+    console.log('Starting user registration process...');
+    
     // Verificar si el usuario ya existe
-    let user = await User.findOne({ email });
-    if (user) {
+    let user = await pool.query('SELECT * FROM "Users" WHERE email = $1', [email]);
+    if (user.rows.length > 0) {
+      console.log('User already exists');
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    // Crear una nueva instancia de usuario
-    user = new User({
-      email,
-      password
-    });
-
-    // Encriptar la contraseña
+    console.log('Creating new user in PostgreSQL...');
+    // Crear un nuevo usuario en PostgreSQL
     const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(password, salt);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    const result = await pool.query(
+      'INSERT INTO "Users" (email, password) VALUES ($1, $2) RETURNING id',
+      [email, hashedPassword]
+    );
+    const userId = result.rows[0].id;
 
-    // Guardar el usuario en la base de datos
-    await user.save();
+    console.log('User created in PostgreSQL with ID:', userId);
 
-    // Guardar los datos de registro en la subcolección
+    // Guardar los datos de registro en MongoDB
     const dataRegister = new DataRegister({
-      userId: user.id,
+      userId: userId,
+      email,  // Asegúrate de pasar el correo electrónico también
       name,
       lastName,
       address,
@@ -82,61 +67,31 @@ exports.register = async (req, res) => {
       expeditionDepartment,
       expeditionCity,
       birthDate,
-      photo: req.file.filename, // Guardar el nombre del archivo de la foto
+      photo: photoUrl, // Asegúrate de asignar photoUrl al campo photo
       matriculationDate
     });
     await dataRegister.save();
+    console.log('User data registered in MongoDB');
 
-    // Crear subcolecciones
-    const familyInfo = new FamilyInfo({
-      userId: user.id,
-      fatherName,
-      motherName,
-      siblings,
-      livingWith,
-      stratum,
-      residenceAddress
-    });
-    await familyInfo.save();
-
-    const additionalInfo = new AdditionalInfo({
-      userId: user.id,
-      previousSchool,
-      academicReport,
-      sedeMatricula,
-      studentFromPreviousInstitution,
-      repeatAcademicYear,
-      hasAllergy,
-      allergy,
-      bloodType,
-      hasDisease,
-      disease,
-      medicalExam,
-      grade
-    });
-    await additionalInfo.save();
-
-    // Crear registros de tutores
-    if (tutors && Array.isArray(tutors)) {
-      for (const tutor of tutors) {
-        const newTutor = new Tutor({
-          userId: user.id,
-          name: tutor.name,
-          lastName: tutor.lastName,
-          email: tutor.email,
-          relation: tutor.relation,
-          relationOther: tutor.relationOther,
-          photo: tutor.photo
-        });
-        await newTutor.save();
-      }
-    }
+    // Agregar el usuario a la colección de preinscritos
+    const prematriculado = {
+      userId,
+      email,
+      name,
+      lastName,
+      matriculationDate
+    };
+    await pool.query(
+      'INSERT INTO prematriculados (userid, email, name, lastname, matriculationdate) VALUES ($1, $2, $3, $4, $5)',
+      [prematriculado.userId, prematriculado.email, prematriculado.name, prematriculado.lastName, prematriculado.matriculationDate]
+    );
+    console.log('User added to prematriculados collection');
 
     // Crear y enviar el token
     const payload = {
       user: {
-        id: user.id,
-        role: user.role
+        id: userId,
+        role: 'user'
       }
     };
 
@@ -146,11 +101,12 @@ exports.register = async (req, res) => {
       { expiresIn: '1h' },
       (err, token) => {
         if (err) throw err;
+        console.log('Token generated and sent to client');
         res.json({ token });
       }
     );
   } catch (err) {
-    console.error(err.message);
+    console.error('Error in user registration process:', err.message);
     res.status(500).json({ message: 'Server error' });
   }
 };
