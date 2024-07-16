@@ -1,3 +1,4 @@
+// src/routes/register.js
 const express = require('express');
 const router = express.Router();
 const { check, validationResult } = require('express-validator');
@@ -5,6 +6,7 @@ const registerController = require('../controllers/registerController');
 const multer = require('multer');
 const path = require('path');
 const crypto = require('crypto');
+const tenantMiddleware = require('../middleware/tenantMiddleware');
 
 // Configurar multer para la carga de archivos con nombres únicos
 const storage = multer.diskStorage({
@@ -40,6 +42,7 @@ const upload = multer({
 router.post(
   '/',
   upload.single('photo'), // Asegúrate de que esto coincida con el nombre del campo de archivo en tu frontend
+  tenantMiddleware,
   [
     check('email', 'Please include a valid email').isEmail().normalizeEmail(),
     check('password', 'Password must be 6 or more characters').isLength({ min: 6 }).trim().escape(),
@@ -52,7 +55,6 @@ router.post(
     check('expeditionDepartment', 'Expedition department is required').not().isEmpty().trim().escape(),
     check('expeditionCity', 'Expedition city is required').not().isEmpty().trim().escape(),
     check('birthDate', 'Birth date is required').not().isEmpty().isISO8601().toDate(),
-    check('matriculationDate', 'Matriculation date is required').not().isEmpty().isISO8601().toDate(),
     check('grade', 'Grade is required').not().isEmpty().trim().escape(),
     check('previousSchool', 'Previous school is required').not().isEmpty().trim().escape(),
     check('sedeMatricula', 'Sede Matricula is required').not().isEmpty().trim().escape(),

@@ -1,3 +1,4 @@
+// src/controllers/authController.js
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const config = require('config');
@@ -6,11 +7,12 @@ const pool = new Pool({ connectionString: config.get('postgresURI') });
 
 exports.login = async (req, res) => {
   const { email, password } = req.body;
+  const tenantId = req.tenant_id;
 
   try {
-    // Verificar si el usuario existe en PostgreSQL
+    // Verificar si el usuario existe en PostgreSQL para el tenant específico
     const client = await pool.connect();
-    const result = await client.query('SELECT * FROM public."Users" WHERE email = $1', [email]);
+    const result = await client.query('SELECT * FROM public."Users" WHERE email = $1 AND tenant_id = $2', [email, tenantId]);
     client.release();
 
     if (result.rows.length === 0) {
@@ -29,7 +31,8 @@ exports.login = async (req, res) => {
     const payload = {
       user: {
         id: user.id,
-        role: user.role
+        role: user.role,
+        tenant_id: tenantId
       }
     };
 
@@ -61,7 +64,8 @@ exports.renewToken = (req, res) => {
     const payload = {
       user: {
         id: decoded.user.id,
-        role: decoded.user.role
+        role: decoded.user.role,
+        tenant_id: decoded.user.tenant_id
       }
     };
 

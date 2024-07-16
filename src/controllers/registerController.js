@@ -1,3 +1,4 @@
+// src/controllers/registerController.js
 const User = require('../models/User');
 const DataRegister = require('../models/DataRegister');
 const AdditionalInfo = require('../models/AdditionalInfo');
@@ -32,7 +33,6 @@ exports.register = async (req, res) => {
     expeditionDepartment,
     expeditionCity,
     birthDate,
-    matriculationDate,
     photoUrl,
     grade,
     previousSchool,
@@ -56,13 +56,15 @@ exports.register = async (req, res) => {
     consignmentReceipt
   } = req.body;
 
+  const tenantId = req.tenant_id;
+
   console.log('Request body:', req.body);
 
   try {
     console.log('Starting user registration process...');
     
     // Verificar si el usuario ya existe
-    let user = await pool.query('SELECT * FROM "Users" WHERE email = $1', [email]);
+    let user = await pool.query('SELECT * FROM "Users" WHERE email = $1 AND tenant_id = $2', [email, tenantId]);
     if (user.rows.length > 0) {
       console.log('User already exists');
       return res.status(400).json({ message: 'User already exists' });
@@ -73,8 +75,8 @@ exports.register = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
     const result = await pool.query(
-      'INSERT INTO "Users" (email, password) VALUES ($1, $2) RETURNING id',
-      [email, hashedPassword]
+      'INSERT INTO "Users" (email, password, tenant_id) VALUES ($1, $2, $3) RETURNING id',
+      [email, hashedPassword, tenantId]
     );
     const userId = result.rows[0].id;
 
@@ -87,6 +89,7 @@ exports.register = async (req, res) => {
     const dataRegister = new DataRegister({
       studentId,
       userId,
+      tenantId,
       email,
       name,
       lastName,
@@ -97,8 +100,7 @@ exports.register = async (req, res) => {
       expeditionDepartment,
       expeditionCity,
       birthDate,
-      photo: photoUrl,
-      matriculationDate
+      photo: photoUrl
     });
     await dataRegister.save();
     console.log('User data registered in MongoDB');
@@ -106,6 +108,7 @@ exports.register = async (req, res) => {
     // Guardar información adicional en MongoDB
     const additionalInfo = new AdditionalInfo({
       studentId,
+      tenantId,
       grade,
       previousSchool,
       sedeMatricula,
@@ -123,6 +126,7 @@ exports.register = async (req, res) => {
     // Guardar información de tutores en MongoDB
     const tutorsInfo = new TutorsInfo({
       studentId,
+      tenantId,
       tutors
     });
     await tutorsInfo.save();
@@ -131,6 +135,7 @@ exports.register = async (req, res) => {
     // Guardar información familiar en MongoDB
     const familyInfo = new FamilyInfo({
       studentId,
+      tenantId,
       fatherName,
       motherName,
       siblings,
@@ -144,6 +149,7 @@ exports.register = async (req, res) => {
     // Guardar archivos en MongoDB
     const files = new Files({
       studentId,
+      tenantId,
       studentDocument,
       tutorDocument,
       consignmentReceipt
@@ -155,14 +161,14 @@ exports.register = async (req, res) => {
     const prematriculado = {
       studentId,
       userId,
+      tenantId,
       email,
       name,
-      lastName,
-      matriculationDate
+      lastName
     };
     await pool.query(
-      'INSERT INTO prematriculados (studentid, userid, email, name, lastname, matriculationdate) VALUES ($1, $2, $3, $4, $5, $6)',
-      [prematriculado.studentId, prematriculado.userId, prematriculado.email, prematriculado.name, prematriculado.lastName, prematriculado.matriculationDate]
+      'INSERT INTO prematriculados (studentid, userid, tenantid, email, name, lastname) VALUES ($1, $2, $3, $4, $5, $6)',
+      [prematriculado.studentId, prematriculado.userId, prematriculado.tenantId, prematriculado.email, prematriculado.name, prematriculado.lastName]
     );
     console.log('User added to prematriculados collection');
 
@@ -170,7 +176,8 @@ exports.register = async (req, res) => {
     const payload = {
       user: {
         id: userId,
-        role: 'user'
+        role: 'user',
+        tenant_id: tenantId
       }
     };
 

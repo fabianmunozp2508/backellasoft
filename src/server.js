@@ -1,3 +1,4 @@
+// server.js
 process.env.NODE_CONFIG_DIR = __dirname + '/config';
 require('dotenv').config(); // Asegúrate de que esto esté al principio del archivo
 
@@ -9,12 +10,14 @@ const mongoSanitize = require('express-mongo-sanitize');
 const rateLimit = require('express-rate-limit');
 const logger = require('./utils/logger');
 const path = require('path');
-const connectDB = require('./config/db'); // Importar la conexión a MongoDB
+const connectMongoDB = require('./config/db'); // Importar la conexión a MongoDB
+const sequelize = require('./config/db_postgres'); // Importar la conexión a PostgreSQL
+const tenantMiddleware = require('./middleware/tenantMiddleware'); // Importar el middleware de tenant
 
 const app = express();
 
 // Conectar a MongoDB
-connectDB();
+connectMongoDB();
 
 // Middlewares
 app.use(bodyParser.json());
@@ -29,12 +32,15 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+// Middleware para manejar el tenant basado en el subdominio
+app.use(tenantMiddleware);
 
 // Rutas
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/prematriculados', require('./routes/prematriculados'));
 app.use('/api/register', require('./routes/register'));
 app.use('/api/upload', require('./routes/upload'));
+
 // Manejo de errores global
 app.use((err, req, res, next) => {
   logger.error(err.message);
@@ -47,7 +53,6 @@ app.listen(PORT, () => {
 });
 
 // Sincronizar modelos
-const sequelize = require('./config/db_postgres');
 const User = require('./models/User');
 
 sequelize.sync().then(() => {

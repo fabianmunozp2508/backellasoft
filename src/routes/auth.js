@@ -1,9 +1,11 @@
+// src/routes/auth.js
 const express = require('express');
 const router = express.Router();
 const { check, validationResult } = require('express-validator');
 const authController = require('../controllers/authController');
 const auth = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
+const tenantMiddleware = require('../middleware/tenantMiddleware');
 
 // Configurar la limitación de tasa de solicitudes
 const loginLimiter = rateLimit({
@@ -18,6 +20,7 @@ const loginLimiter = rateLimit({
 router.post(
   '/login',
   loginLimiter,
+  tenantMiddleware,
   [
     check('email').isEmail().withMessage('Please include a valid email').normalizeEmail(),
     check('password').exists().withMessage('Password is required').trim().escape()
