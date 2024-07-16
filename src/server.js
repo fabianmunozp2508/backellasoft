@@ -13,6 +13,7 @@ const path = require('path');
 const connectMongoDB = require('./config/db'); // Importar la conexión a MongoDB
 const sequelize = require('./config/db_postgres'); // Importar la conexión a PostgreSQL
 const tenantMiddleware = require('./middleware/tenantMiddleware'); // Importar el middleware de tenant
+const subdomain = require('express-subdomain'); // Importar express-subdomain
 
 const app = express();
 
@@ -36,10 +37,14 @@ app.use(limiter);
 app.use(tenantMiddleware);
 
 // Rutas
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/prematriculados', require('./routes/prematriculados'));
-app.use('/api/register', require('./routes/register'));
-app.use('/api/upload', require('./routes/upload'));
+const router = express.Router();
+router.use('/auth', require('./routes/auth'));
+router.use('/prematriculados', require('./routes/prematriculados'));
+router.use('/register', require('./routes/register'));
+router.use('/upload', require('./routes/upload'));
+
+// Usar express-subdomain para manejar las rutas bajo subdominios
+app.use(subdomain('*', router));
 
 // Manejo de errores global
 app.use((err, req, res, next) => {
