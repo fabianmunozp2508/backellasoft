@@ -1,23 +1,17 @@
 const mongoose = require('mongoose');
 
-const additionalInfoSchema = new mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  previousSchool: String,
-  academicReport: String,
-  sedeMatricula: String,
-  studentFromPreviousInstitution: Boolean,
-  repeatAcademicYear: Boolean,
-  hasAllergy: Boolean,
-  allergy: String,
-  bloodType: String,
-  hasDisease: Boolean,
-  disease: String,
-  medicalExam: String,
-  grade: String
+const AdditionalInfoSchema = new mongoose.Schema({
+  studentId: { type: String, required: true },
+  grade: { type: String, required: true },
+  previousSchool: { type: String, required: true },
+  sedeMatricula: { type: String, required: true },
+  studentFromPreviousInstitution: { type: Boolean, required: true },
+  repeatAcademicYear: { type: Boolean, required: true },
+  hasAllergy: { type: Boolean, required: true },
+  allergy: { type: String },
+  bloodType: { type: String, required: true },
+  hasDisease: { type: Boolean, required: true },
+  disease: { type: String }
 });
 
-module.exports = mongoose.model('AdditionalInfo', additionalInfoSchema);
+module.exports = mongoose.model('AdditionalInfo', AdditionalInfoSchema);

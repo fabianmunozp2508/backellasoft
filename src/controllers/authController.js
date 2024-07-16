@@ -10,7 +10,7 @@ exports.login = async (req, res) => {
   try {
     // Verificar si el usuario existe en PostgreSQL
     const client = await pool.connect();
-    const result = await client.query('SELECT * FROM Users WHERE email = $1', [email]);
+    const result = await client.query('SELECT * FROM public."Users" WHERE email = $1', [email]);
     client.release();
 
     if (result.rows.length === 0) {
@@ -43,21 +43,21 @@ exports.login = async (req, res) => {
       }
     );
   } catch (err) {
-    console.error(err.message);
+    console.error('Server error:', err.message);
     res.status(500).json({ message: 'Server error' });
   }
 };
 
 exports.renewToken = (req, res) => {
   const token = req.header('x-auth-token');
-  
+
   if (!token) {
     return res.status(401).json({ message: 'No token, authorization denied' });
   }
 
   try {
     const decoded = jwt.verify(token, config.get('jwtSecret'));
-    
+
     const payload = {
       user: {
         id: decoded.user.id,
@@ -68,6 +68,7 @@ exports.renewToken = (req, res) => {
     const newToken = jwt.sign(payload, config.get('jwtSecret'), { expiresIn: '1h' });
     res.json({ token: newToken });
   } catch (err) {
+    console.error('Token is not valid:', err.message);
     res.status(401).json({ message: 'Token is not valid' });
   }
 };

@@ -39,7 +39,7 @@ const upload = multer({
 // @access  Public
 router.post(
   '/',
-  upload.single('photo'),
+  upload.single('photo'), // Asegúrate de que esto coincida con el nombre del campo de archivo en tu frontend
   [
     check('email', 'Please include a valid email').isEmail().normalizeEmail(),
     check('password', 'Password must be 6 or more characters').isLength({ min: 6 }).trim().escape(),
@@ -53,6 +53,22 @@ router.post(
     check('expeditionCity', 'Expedition city is required').not().isEmpty().trim().escape(),
     check('birthDate', 'Birth date is required').not().isEmpty().isISO8601().toDate(),
     check('matriculationDate', 'Matriculation date is required').not().isEmpty().isISO8601().toDate(),
+    check('grade', 'Grade is required').not().isEmpty().trim().escape(),
+    check('previousSchool', 'Previous school is required').not().isEmpty().trim().escape(),
+    check('sedeMatricula', 'Sede Matricula is required').not().isEmpty().trim().escape(),
+    check('studentFromPreviousInstitution', 'Student From Previous Institution is required').not().isEmpty().trim().escape(),
+    check('repeatAcademicYear', 'Repeat Academic Year is required').not().isEmpty().trim().escape(),
+    check('hasAllergy', 'Has Allergy is required').not().isEmpty().trim().escape(),
+    check('allergy', 'Allergy is required if Has Allergy is true').optional({ checkFalsy: true }).trim().escape(),
+    check('bloodType', 'Blood Type is required').not().isEmpty().trim().escape(),
+    check('hasDisease', 'Has Disease is required').not().isEmpty().trim().escape(),
+    check('disease', 'Disease is required if Has Disease is true').optional({ checkFalsy: true }).trim().escape(),
+    check('fatherName', 'Father Name is required').not().isEmpty().trim().escape(),
+    check('motherName', 'Mother Name is required').not().isEmpty().trim().escape(),
+    check('siblings', 'Siblings is required').not().isEmpty().trim().escape(),
+    check('livingWith', 'Living With is required').not().isEmpty().trim().escape(),
+    check('stratum', 'Stratum is required').not().isEmpty().trim().escape(),
+    check('residenceAddress', 'Residence Address is required').not().isEmpty().trim().escape(),
     // Agrega cualquier otro campo de validación necesario
   ],
   (req, res, next) => {

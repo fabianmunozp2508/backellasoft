@@ -1,17 +1,13 @@
 const mongoose = require('mongoose');
 
-const familyInfoSchema = new mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  fatherName: String,
-  motherName: String,
-  siblings: Number,
-  livingWith: String,
-  stratum: String,
-  residenceAddress: String
+const FamilyInfoSchema = new mongoose.Schema({
+  studentId: { type: String, required: true },
+  fatherName: { type: String, required: true },
+  motherName: { type: String, required: true },
+  siblings: { type: Number, required: true },
+  livingWith: { type: String, required: true },
+  stratum: { type: Number, required: true },
+  residenceAddress: { type: String, required: true }
 });
 
-module.exports = mongoose.model('FamilyInfo', familyInfoSchema);
+module.exports = mongoose.model('FamilyInfo', FamilyInfoSchema);

@@ -20,8 +20,7 @@ router.post(
   loginLimiter,
   [
     check('email').isEmail().withMessage('Please include a valid email').normalizeEmail(),
-    check('password').exists().withMessage('Password is required').trim().escape(),
-    check('recaptchaToken').not().isEmpty().withMessage('reCAPTCHA is required')
+    check('password').exists().withMessage('Password is required').trim().escape()
   ],
   (req, res, next) => {
     const errors = validationResult(req);
