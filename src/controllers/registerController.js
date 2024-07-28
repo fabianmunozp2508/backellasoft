@@ -1,4 +1,3 @@
-// src/controllers/registerController.js
 const User = require('../models/User');
 const DataRegister = require('../models/DataRegister');
 const AdditionalInfo = require('../models/AdditionalInfo');
@@ -11,15 +10,19 @@ const config = require('config');
 const { validationResult } = require('express-validator');
 const { Pool } = require('pg');
 const crypto = require('crypto');
+const path = require('path');
 
 const pool = new Pool({ connectionString: config.get('postgresURI') });
 
 exports.register = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-  
     return res.status(400).json({ errors: errors.array() });
   }
+
+  // Log para depuración
+  console.log('Received body data in controller:', req.body);
+  console.log('Received files in controller:', req.files);
 
   const {
     name,
@@ -33,7 +36,6 @@ exports.register = async (req, res) => {
     expeditionDepartment,
     expeditionCity,
     birthDate,
-    photoUrl,
     grade,
     previousSchool,
     sedeMatricula,
@@ -51,23 +53,16 @@ exports.register = async (req, res) => {
     stratum,
     residenceAddress,
     tutors,
-    studentDocument,
-    tutorDocument,
-    consignmentReceipt,
     matriculationDate // Asegúrate de incluir este campo
   } = req.body;
 
   const tenantId = req.tenant_id;
 
-
   if (!tenantId) {
     return res.status(400).json({ message: 'No tenant specified' });
   }
 
-
-
   try {
-   
     let user = await pool.query('SELECT * FROM "Users" WHERE email = $1 AND tenant_id = $2', [email, tenantId]);
     if (user.rows.length > 0) {
       console.log('User already exists');
@@ -75,7 +70,6 @@ exports.register = async (req, res) => {
     }
 
     console.log('Creating new user in PostgreSQL...');
-    // Crear un nuevo usuario en PostgreSQL
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
     const result = await pool.query(
@@ -85,10 +79,8 @@ exports.register = async (req, res) => {
     const userId = result.rows[0].id;
     console.log('User created in PostgreSQL with ID:', userId);
 
-    // Generar un ID de estudiante aleatorio
     const studentId = crypto.randomBytes(12).toString('hex');
- 
-  
+
     const dataRegister = new DataRegister({
       studentId,
       userId,
@@ -103,13 +95,10 @@ exports.register = async (req, res) => {
       expeditionDepartment,
       expeditionCity,
       birthDate,
-      photo: photoUrl,
-      matriculationDate // Asegúrate de incluir este campo
+      photo: req.files && req.files.photo ? `${req.protocol}://${req.get('host')}/uploads/${req.files.photo[0].filename}` : '',
+      matriculationDate
     });
     await dataRegister.save();
-   
-
-    // Guardar información adicional en MongoDB
 
     const additionalInfo = new AdditionalInfo({
       studentId,
@@ -126,35 +115,39 @@ exports.register = async (req, res) => {
       disease
     });
     await additionalInfo.save();
-  
+
     const tutorsInfo = new TutorsInfo({
       studentId,
       tenantId,
       tutors
     });
     await tutorsInfo.save();
-  
+
     const familyInfo = new FamilyInfo({
       studentId,
       tenantId,
       fatherName,
       motherName,
-      siblings,
+      siblings: parseInt(siblings, 10),
       livingWith,
       stratum,
       residenceAddress
     });
     await familyInfo.save();
- 
+
+    const generateFileUrl = (file) => {
+      return `${req.protocol}://${req.get('host')}/uploads/${file.filename}`;
+    };
+
     const files = new Files({
       studentId,
       tenantId,
-      studentDocument,
-      tutorDocument,
-      consignmentReceipt
+      studentDocument: req.files && req.files.studentDocument ? generateFileUrl(req.files.studentDocument[0]) : null,
+      tutorDocument: req.files && req.files.tutorDocument ? generateFileUrl(req.files.tutorDocument[0]) : null,
+      consignmentReceipt: req.files && req.files.consignmentReceipt ? generateFileUrl(req.files.consignmentReceipt[0]) : null
     });
     await files.save();
- 
+
     const prematriculado = {
       studentId,
       userId,
@@ -162,13 +155,13 @@ exports.register = async (req, res) => {
       email,
       name,
       lastName,
-      matriculationDate // Asegúrate de incluir este campo
+      matriculationDate
     };
     await pool.query(
       'INSERT INTO prematriculados (studentid, userid, tenant_id, email, name, lastname, matriculationdate) VALUES ($1, $2, $3, $4, $5, $6, $7)',
       [prematriculado.studentId, prematriculado.userId, prematriculado.tenantId, prematriculado.email, prematriculado.name, prematriculado.lastName, prematriculado.matriculationDate]
     );
-   
+
     const payload = {
       user: {
         id: userId,

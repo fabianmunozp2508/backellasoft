@@ -8,10 +8,9 @@ router.post('/forgot-password', [
   check('email').isEmail().withMessage('Please include a valid email').normalizeEmail()
 ], authController.forgotPassword);
 
-// Ruta para restablecer la contraseña
+// Ruta para restablecer la contraseña mediante el token y enviar la nueva contraseña generada
 router.post('/reset-password', [
-  check('token').notEmpty().withMessage('Token is required'),
-  check('password').notEmpty().withMessage('Password is required').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long')
+  check('token').notEmpty().withMessage('Token is required')
 ], authController.resetPassword);
 
 module.exports = router;

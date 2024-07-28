@@ -6,13 +6,18 @@ const pool = new Pool({ connectionString: config.get('postgresURI') });
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 
-// Configuración del transportador de nodemailer
+// Configuración del transportador de nodemailer para Hostinger
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.hostinger.com',
+  port: 587,
+  secure: false, // true para 465, false para otros puertos
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    user: process.env.EMAIL_USER, // tu correo de hostinger
+    pass: process.env.EMAIL_PASS, // tu contraseña de hostinger
   },
+  tls: {
+    rejectUnauthorized: false
+  }
 });
 
 // Función para generar una contraseña segura
@@ -32,9 +37,10 @@ exports.forgotPassword = async (req, res) => {
     const client = await pool.connect();
     const result = await client.query('SELECT id FROM public."Users" WHERE email = $1', [email]);
 
+    // No devolvemos un error si el email no se encuentra
     if (result.rows.length === 0) {
       client.release();
-      return res.status(400).json({ message: 'Email not found' });
+      return res.status(200).json({ message: 'Si el correo está registrado, se enviará un correo para la recuperación de la contraseña.' });
     }
 
     const user = result.rows[0];
@@ -148,7 +154,7 @@ exports.resetPassword = async (req, res) => {
   const { token } = req.body;
   try {
     const client = await pool.connect();
-    const result = await client.query('SELECT id, reset_password_expires FROM public."Users" WHERE reset_password_token = $1', [token]);
+    const result = await client.query('SELECT id, email, reset_password_expires FROM public."Users" WHERE reset_password_token = $1', [token]);
 
     if (result.rows.length === 0) {
       client.release();
@@ -175,7 +181,7 @@ exports.resetPassword = async (req, res) => {
 
     // Enviar la nueva contraseña por correo electrónico
     const mailOptions = {
-      to: email,
+      to: user.email,
       from: process.env.EMAIL_USER,
       subject: 'Your new password',
       html: `

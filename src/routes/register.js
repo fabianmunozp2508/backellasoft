@@ -1,4 +1,3 @@
-// src/routes/register.js
 const express = require('express');
 const router = express.Router();
 const { check, validationResult } = require('express-validator');
@@ -41,8 +40,14 @@ const upload = multer({
 // @access  Public
 router.post(
   '/',
-  upload.single('photo'), // Asegúrate de que esto coincida con el nombre del campo de archivo en tu frontend
   tenantMiddleware,
+  upload.fields([
+    { name: 'academicReport', maxCount: 1 },
+    { name: 'studentDocument', maxCount: 1 },
+    { name: 'tutorDocument', maxCount: 1 },
+    { name: 'consignmentReceipt', maxCount: 1 },
+    { name: 'photo', maxCount: 1 }
+  ]), // Asegúrate de que esto coincida con el nombre del campo de archivo en tu frontend
   [
     check('email', 'Please include a valid email').isEmail().normalizeEmail(),
     check('password', 'Password must be 6 or more characters').isLength({ min: 6 }).trim().escape(),
@@ -74,11 +79,13 @@ router.post(
     // Agrega cualquier otro campo de validación necesario
   ],
   (req, res, next) => {
-  
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
+    // Log para depuración
+    console.log('Received body data:', req.body);
+    console.log('Received files:', req.files);
     next();
   },
   registerController.register
