@@ -1,6 +1,6 @@
 // models/User.js
 const { DataTypes } = require('sequelize');
-const sequelize = require('../config/db_postgres');
+const sequelize = require('../../config/db_postgres');
 
 const User = sequelize.define('User', {
   name: {
@@ -63,7 +63,15 @@ const User = sequelize.define('User', {
   date: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW
-  }
+  },
+  reset_password_token: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  reset_password_expires: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
 }, {
   timestamps: true,
   hooks: {

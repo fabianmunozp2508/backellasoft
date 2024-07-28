@@ -74,6 +74,7 @@ router.post(
     // Agrega cualquier otro campo de validación necesario
   ],
   (req, res, next) => {
+  
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });

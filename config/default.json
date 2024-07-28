@@ -1,0 +1,10 @@
+{
+  "mongoURI": "mongodb://localhost:27017/ellasoft",
+  "postgresURI": "postgres://ellasoft_uno:S3cur3P@ssw0rd!@localhost:5433/ellasoft",
+  "jwtSecret": "yourSecretKey",
+  "recaptchaSecretKey": "6Lf0n_8pAAAAAKBn_Hx7ySG2jiV6DJHOJCSFVkfW",
+  "emailUser": "notificaciones@ellasoft.online",
+  "emailPass": "@V1g@1l1007",
+  "port": 5000,
+  "nodeEnv": "development"
+}

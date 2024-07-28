@@ -1,4 +1,3 @@
-// src/routes/auth.js
 const express = require('express');
 const router = express.Router();
 const { check, validationResult } = require('express-validator');
@@ -10,7 +9,7 @@ const tenantMiddleware = require('../middleware/tenantMiddleware');
 // Configurar la limitación de tasa de solicitudes
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 5, // Limitar cada IP a 5 solicitudes por ventana de 15 minutos
+  max: 100, // Limitar cada IP a 5 solicitudes por ventana de 15 minutos
   message: 'Too many login attempts, please try again later'
 });
 
@@ -39,5 +38,11 @@ router.post(
 // @desc    Renew token
 // @access  Private
 router.get('/renew', auth, authController.renewToken);
+
+// @route   GET /api/auth/status
+// @desc    Check token status
+// @access  Private
+router.get('/status', auth, authController.checkTokenStatus);
+
 
 module.exports = router;

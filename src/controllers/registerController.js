@@ -17,7 +17,7 @@ const pool = new Pool({ connectionString: config.get('postgresURI') });
 exports.register = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    console.log('Validation errors:', errors.array());
+  
     return res.status(400).json({ errors: errors.array() });
   }
 
@@ -53,17 +53,21 @@ exports.register = async (req, res) => {
     tutors,
     studentDocument,
     tutorDocument,
-    consignmentReceipt
+    consignmentReceipt,
+    matriculationDate // Asegúrate de incluir este campo
   } = req.body;
 
   const tenantId = req.tenant_id;
 
-  console.log('Request body:', req.body);
+
+  if (!tenantId) {
+    return res.status(400).json({ message: 'No tenant specified' });
+  }
+
+
 
   try {
-    console.log('Starting user registration process...');
-    
-    // Verificar si el usuario ya existe
+   
     let user = await pool.query('SELECT * FROM "Users" WHERE email = $1 AND tenant_id = $2', [email, tenantId]);
     if (user.rows.length > 0) {
       console.log('User already exists');
@@ -79,13 +83,12 @@ exports.register = async (req, res) => {
       [email, hashedPassword, tenantId]
     );
     const userId = result.rows[0].id;
+    console.log('User created in PostgreSQL with ID:', userId);
 
     // Generar un ID de estudiante aleatorio
     const studentId = crypto.randomBytes(12).toString('hex');
-
-    console.log('User created in PostgreSQL with ID:', userId);
-
-    // Guardar los datos de registro en MongoDB
+ 
+  
     const dataRegister = new DataRegister({
       studentId,
       userId,
@@ -100,12 +103,14 @@ exports.register = async (req, res) => {
       expeditionDepartment,
       expeditionCity,
       birthDate,
-      photo: photoUrl
+      photo: photoUrl,
+      matriculationDate // Asegúrate de incluir este campo
     });
     await dataRegister.save();
-    console.log('User data registered in MongoDB');
+   
 
     // Guardar información adicional en MongoDB
+
     const additionalInfo = new AdditionalInfo({
       studentId,
       tenantId,
@@ -121,18 +126,14 @@ exports.register = async (req, res) => {
       disease
     });
     await additionalInfo.save();
-    console.log('Additional info registered in MongoDB');
-
-    // Guardar información de tutores en MongoDB
+  
     const tutorsInfo = new TutorsInfo({
       studentId,
       tenantId,
       tutors
     });
     await tutorsInfo.save();
-    console.log('Tutors info registered in MongoDB');
-
-    // Guardar información familiar en MongoDB
+  
     const familyInfo = new FamilyInfo({
       studentId,
       tenantId,
@@ -144,9 +145,7 @@ exports.register = async (req, res) => {
       residenceAddress
     });
     await familyInfo.save();
-    console.log('Family info registered in MongoDB');
-
-    // Guardar archivos en MongoDB
+ 
     const files = new Files({
       studentId,
       tenantId,
@@ -155,24 +154,21 @@ exports.register = async (req, res) => {
       consignmentReceipt
     });
     await files.save();
-    console.log('Files registered in MongoDB');
-
-    // Agregar el usuario a la colección de preinscritos en PostgreSQL
+ 
     const prematriculado = {
       studentId,
       userId,
       tenantId,
       email,
       name,
-      lastName
+      lastName,
+      matriculationDate // Asegúrate de incluir este campo
     };
     await pool.query(
-      'INSERT INTO prematriculados (studentid, userid, tenantid, email, name, lastname) VALUES ($1, $2, $3, $4, $5, $6)',
-      [prematriculado.studentId, prematriculado.userId, prematriculado.tenantId, prematriculado.email, prematriculado.name, prematriculado.lastName]
+      'INSERT INTO prematriculados (studentid, userid, tenant_id, email, name, lastname, matriculationdate) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+      [prematriculado.studentId, prematriculado.userId, prematriculado.tenantId, prematriculado.email, prematriculado.name, prematriculado.lastName, prematriculado.matriculationDate]
     );
-    console.log('User added to prematriculados collection');
-
-    // Crear y enviar el token
+   
     const payload = {
       user: {
         id: userId,
