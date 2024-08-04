@@ -1,4 +1,4 @@
-const { Sequelize, DataTypes } = require('sequelize');
+const { DataTypes } = require('sequelize');
 const sequelize = require('../../config/db_postgres');
 
 const Institution = sequelize.define('Institution', {
@@ -9,7 +9,8 @@ const Institution = sequelize.define('Institution', {
   },
   tenant_id: {
     type: DataTypes.INTEGER,
-    allowNull: false
+    allowNull: false,
+    unique: true // Asegura que tenant_id sea único
   },
   name: {
     type: DataTypes.STRING,

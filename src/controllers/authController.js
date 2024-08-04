@@ -1,4 +1,3 @@
-// src/controllers/authController.js
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const config = require('config');
@@ -7,14 +6,13 @@ const pool = new Pool({ connectionString: config.get('postgresURI') });
 
 exports.login = async (req, res) => {
   const { email, password } = req.body;
-  const tenantId = req.tenant_id;
 
-  console.log('Login request:', { email, tenantId });
+  console.log('Login request received with data:', { email, password });
 
   try {
-    // Verificar si el usuario existe en PostgreSQL para el tenant específico
+    // Verificar si el usuario existe en PostgreSQL
     const client = await pool.connect();
-    const result = await client.query('SELECT * FROM public."Users" WHERE email = $1 AND tenant_id = $2', [email, tenantId]);
+    const result = await client.query('SELECT * FROM public."Users" WHERE email = $1', [email]);
 
     if (result.rows.length === 0) {
       client.release();
@@ -23,9 +21,12 @@ exports.login = async (req, res) => {
     }
 
     const user = result.rows[0];
+    console.log('User found in database:', user);
 
     // Verificar la contraseña
     const isMatch = await bcrypt.compare(password, user.password);
+    console.log('Password match result:', isMatch);
+
     if (!isMatch) {
       client.release();
       console.log('Invalid credentials');
@@ -42,6 +43,20 @@ exports.login = async (req, res) => {
     }
 
     const userStatus = statusResult.rows[0];
+    console.log('User status found:', userStatus);
+
+    // Consultar los datos de la institución
+    const institutionResult = await client.query('SELECT * FROM public.institutions WHERE tenant_id = $1', [user.tenant_id]);
+
+    if (institutionResult.rows.length === 0) {
+      client.release();
+      console.log('Institution not found');
+      return res.status(404).json({ message: 'Institution not found' });
+    }
+
+    const institution = institutionResult.rows[0];
+    console.log('Institution found:', institution);
+
     client.release();
 
     // Crear y enviar el token
@@ -49,11 +64,12 @@ exports.login = async (req, res) => {
       user: {
         id: user.id,
         role: user.role,
-        tenant_id: tenantId,
+        tenant_id: user.tenant_id, // Asignar tenant_id desde el usuario
         status: userStatus.status,
         isActive: userStatus.is_active_user,
         matriculationDate: userStatus.matriculation_date
-      }
+      },
+      institution
     };
 
     jwt.sign(
@@ -61,9 +77,12 @@ exports.login = async (req, res) => {
       config.get('jwtSecret'),
       { expiresIn: '1h' },
       (err, token) => {
-        if (err) throw err;
-        console.log('Token generated and sent to client');
-        res.json({ token, userStatus }); // Enviar token y estado del usuario
+        if (err) {
+          console.error('Error generating token:', err);
+          throw err;
+        }
+        console.log('Token generated and sent to client:', token);
+        res.json({ token, userStatus, institution }); // Enviar token, estado del usuario e institución
       }
     );
   } catch (err) {
@@ -90,7 +109,8 @@ exports.renewToken = (req, res) => {
         status: decoded.user.status,
         isActive: decoded.user.isActive,
         matriculationDate: decoded.user.matriculationDate
-      }
+      },
+      institution: decoded.institution
     };
 
     const newToken = jwt.sign(payload, config.get('jwtSecret'), { expiresIn: '1h' });
@@ -110,9 +130,28 @@ exports.checkTokenStatus = (req, res) => {
 
   try {
     const decoded = jwt.verify(token, config.get('jwtSecret'));
-    res.json({ user: decoded.user });
+    res.json({ user: decoded.user, institution: decoded.institution });
   } catch (err) {
     console.error('Token is not valid:', err.message);
     res.status(401).json({ message: 'Token is not valid' });
+  }
+};
+
+exports.checkConnection = async (req, res) => {
+  try {
+    const client = await pool.connect();
+    const result = await client.query('SELECT 1');
+    client.release();
+
+    if (result) {
+      console.log('Database connection successful');
+      res.status(200).json({ message: 'Database connection successful' });
+    } else {
+      console.log('Database connection failed');
+      res.status(500).json({ message: 'Database connection failed' });
+    }
+  } catch (err) {
+    console.error('Database connection error:', err.message);
+    res.status(500).json({ message: 'Database connection error' });
   }
 };

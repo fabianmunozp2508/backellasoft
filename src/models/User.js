@@ -1,8 +1,26 @@
-// models/User.js
 const { DataTypes } = require('sequelize');
 const sequelize = require('../../config/db_postgres');
+const bcrypt = require('bcrypt');
 
 const User = sequelize.define('User', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  tenant_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'Institution',
+      key: 'tenant_id'
+    }
+  },
+  mongoUserId: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true // Asegura que mongoUserId sea único
+  },
   name: {
     type: DataTypes.STRING,
     allowNull: false
@@ -19,59 +37,7 @@ const User = sequelize.define('User', {
   password: {
     type: DataTypes.STRING,
     allowNull: false
-  },
-  address: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  phoneNumber: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  documentType: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  documentNumber: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  expeditionDepartment: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  expeditionCity: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  birthDate: {
-    type: DataTypes.DATE,
-    allowNull: false
-  },
-  photo: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  matriculationDate: {
-    type: DataTypes.DATE,
-    allowNull: false
-  },
-  role: {
-    type: DataTypes.STRING,
-    defaultValue: 'user'
-  },
-  date: {
-    type: DataTypes.DATE,
-    defaultValue: DataTypes.NOW
-  },
-  reset_password_token: {
-    type: DataTypes.STRING,
-    allowNull: true,
-  },
-  reset_password_expires: {
-    type: DataTypes.DATE,
-    allowNull: true,
-  },
+  }
 }, {
   timestamps: true,
   hooks: {

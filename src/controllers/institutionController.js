@@ -39,14 +39,14 @@ exports.createInstitution = [
     { name: 'coordinatorSignatures', maxCount: 10 }
   ]),
   async (req, res) => {
-    const { name, header_info, contact_address, contact_phone, contact_email, official_website } = req.body;
-    const tenantId = req.tenant_id;
+    const { name, header_info, contact_address, contact_phone, contact_email, official_website, tenant_id } = req.body;
+    const tenantId = req.tenant_id || tenant_id;
 
     try {
-      const logo_url = req.files['logo'] ? req.files['logo'][0].path : null;
-      const banner_urls = req.files['banners'] ? req.files['banners'].map(file => file.path) : [];
-      const rector_signature_url = req.files['rectorSignature'] ? req.files['rectorSignature'][0].path : null;
-      const coordinator_signatures = req.files['coordinatorSignatures'] ? req.files['coordinatorSignatures'].map(file => file.path) : [];
+      const logo_url = req.files && req.files['logo'] ? req.files['logo'][0].path : null;
+      const banner_urls = req.files && req.files['banners'] ? req.files['banners'].map(file => file.path) : [];
+      const rector_signature_url = req.files && req.files['rectorSignature'] ? req.files['rectorSignature'][0].path : null;
+      const coordinator_signatures = req.files && req.files['coordinatorSignatures'] ? req.files['coordinatorSignatures'].map(file => file.path) : [];
 
       const institution = await Institution.create({
         tenant_id: tenantId,
@@ -70,10 +70,70 @@ exports.createInstitution = [
   }
 ];
 
+
+// Crear o actualizar una institución
+exports.createOrUpdateInstitution = [
+  upload.fields([
+    { name: 'logo', maxCount: 1 },
+    { name: 'banners', maxCount: 10 },
+    { name: 'rectorSignature', maxCount: 1 },
+    { name: 'coordinatorSignatures', maxCount: 10 }
+  ]),
+  async (req, res) => {
+    const { name, header_info, contact_address, contact_phone, contact_email, official_website, tenant_id } = req.body;
+    const tenantId = req.tenant_id || tenant_id;
+
+    try {
+      const logo_url = req.files && req.files['logo'] ? req.files['logo'][0].path : null;
+      const banner_urls = req.files && req.files['banners'] ? req.files['banners'].map(file => file.path) : [];
+      const rector_signature_url = req.files && req.files['rectorSignature'] ? req.files['rectorSignature'][0].path : null;
+      const coordinator_signatures = req.files && req.files['coordinatorSignatures'] ? req.files['coordinatorSignatures'].map(file => file.path) : [];
+
+      let institution = await Institution.findOne({ where: { tenant_id: tenantId } });
+
+      if (institution) {
+        // Actualizar la institución existente
+        await institution.update({
+          name,
+          logo_url: logo_url || institution.logo_url,
+          banner_urls: banner_urls.length > 0 ? banner_urls : institution.banner_urls,
+          rector_signature_url: rector_signature_url || institution.rector_signature_url,
+          coordinator_signatures: coordinator_signatures.length > 0 ? coordinator_signatures : institution.coordinator_signatures,
+          header_info,
+          contact_address,
+          contact_phone,
+          contact_email,
+          official_website
+        });
+        res.status(200).json(institution);
+      } else {
+        // Crear una nueva institución
+        institution = await Institution.create({
+          tenant_id: tenantId,
+          name,
+          logo_url,
+          banner_urls,
+          rector_signature_url,
+          coordinator_signatures,
+          header_info,
+          contact_address,
+          contact_phone,
+          contact_email,
+          official_website
+        });
+        res.status(201).json(institution);
+      }
+    } catch (err) {
+      console.error('Error creating or updating institution:', err);
+      res.status(500).json({ message: 'Server error' });
+    }
+  }
+];
+
 // Crear una nueva sede educativa
 exports.createEducationalSite = async (req, res) => {
-  const { institution_id, name, address } = req.body;
-  const tenantId = req.tenant_id;
+  const { institution_id, name, address, tenant_id } = req.body;
+  const tenantId = req.tenant_id || tenant_id;
 
   try {
     const educationalSite = await EducationalSite.create({
@@ -113,8 +173,8 @@ exports.updateInstitution = [
     { name: 'coordinatorSignatures', maxCount: 10 }
   ]),
   async (req, res) => {
-    const { name, header_info, contact_address, contact_phone, contact_email, official_website } = req.body;
-    const tenantId = req.tenant_id;
+    const { name, header_info, contact_address, contact_phone, contact_email, official_website, tenant_id } = req.body;
+    const tenantId = req.tenant_id || tenant_id;
 
     try {
       const institution = await Institution.findOne({
@@ -125,10 +185,10 @@ exports.updateInstitution = [
         return res.status(404).json({ message: 'Institution not found' });
       }
 
-      const logo_url = req.files['logo'] ? req.files['logo'][0].path : institution.logo_url;
-      const banner_urls = req.files['banners'] ? req.files['banners'].map(file => file.path) : institution.banner_urls;
-      const rector_signature_url = req.files['rectorSignature'] ? req.files['rectorSignature'][0].path : institution.rector_signature_url;
-      const coordinator_signatures = req.files['coordinatorSignatures'] ? req.files['coordinatorSignatures'].map(file => file.path) : institution.coordinator_signatures;
+      const logo_url = req.files && req.files['logo'] ? req.files['logo'][0].path : institution.logo_url;
+      const banner_urls = req.files && req.files['banners'] ? req.files['banners'].map(file => file.path) : institution.banner_urls;
+      const rector_signature_url = req.files && req.files['rectorSignature'] ? req.files['rectorSignature'][0].path : institution.rector_signature_url;
+      const coordinator_signatures = req.files && req.files['coordinatorSignatures'] ? req.files['coordinatorSignatures'].map(file => file.path) : institution.coordinator_signatures;
 
       await institution.update({
         name,
@@ -189,8 +249,8 @@ exports.getEducationalSites = async (req, res) => {
 
 // Actualizar una sede educativa
 exports.updateEducationalSite = async (req, res) => {
-  const { id, name, address } = req.body;
-  const tenantId = req.tenant_id;
+  const { id, name, address, tenant_id } = req.body;
+  const tenantId = req.tenant_id || tenant_id;
 
   try {
     const educationalSite = await EducationalSite.findOne({

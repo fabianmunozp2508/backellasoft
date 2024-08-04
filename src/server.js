@@ -8,20 +8,30 @@ const logger = require('./utils/logger');
 const path = require('path');
 const connectMongoDB = require('../config/db_mongo');
 const sequelize = require('../config/db_postgres');
-const tenantMiddleware = require('./middleware/tenantMiddleware');
 const subdomain = require('express-subdomain');
 const multer = require('multer');
 const crypto = require('crypto');
+const fs = require('fs');
+const https = require('https');
+const tenantMiddleware = require('./middleware/tenantMiddleware');
 require('dotenv').config();
 
 const config = require('config');
 
 const app = express();
 
+// Middleware de registro de solicitudes
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.url}`);
+  console.log('Headers:', req.headers);
+  console.log('Body:', req.body);
+  next();
+});
+
 // Configurar multer para la carga de archivos
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, path.join(__dirname, '../uploads')); // Ruta corregida para los archivos
+    cb(null, path.join(__dirname, '../uploads'));
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + crypto.randomBytes(6).toString('hex');
@@ -50,9 +60,6 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// Middleware para manejar el tenant basado en el subdominio
-app.use(tenantMiddleware);
-
 // Rutas
 const router = express.Router();
 router.use('/auth', require('./routes/auth'));
@@ -66,12 +73,22 @@ router.use('/register', upload.fields([
 ]), require('./routes/register'));
 router.use('/upload', require('./routes/upload'));
 router.use('/user-status', require('./routes/userStatus'));
-router.use('/site-config', require('./routes/siteConfig'));
-router.use('/user-data', require('./routes/userData'));
 router.use('/password-reset', require('./routes/passwordReset'));
 router.use('/reset-password', require('./routes/resetPassword'));
 
+// Aquí aplicamos el tenantMiddleware solo a las rutas que lo necesitan
+const tenantRequiredRoutes = express.Router();
+tenantRequiredRoutes.use(tenantMiddleware);
+tenantRequiredRoutes.use('/site-config', require('./routes/siteConfig'));
+tenantRequiredRoutes.use('/user-data', require('./routes/userData'));
+
+// Rutas de la red social
+tenantRequiredRoutes.use('/posts', require('./routes/posts'));
+tenantRequiredRoutes.use('/comments', require('./routes/comments'));
+tenantRequiredRoutes.use('/likes', require('./routes/likes'));
+
 app.use(subdomain('*', router));
+app.use(subdomain('*', tenantRequiredRoutes));
 
 // Manejo de errores global
 app.use((err, req, res, next) => {
@@ -79,16 +96,24 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Server Error' });
 });
 
+// Configuración HTTPS
+const httpsOptions = {
+  key: fs.readFileSync(path.join(__dirname, '../certificates/key.pem')),
+  cert: fs.readFileSync(path.join(__dirname, '../certificates/cert.pem'))
+};
+
 const PORT = config.get('port') || 5000;
-app.listen(PORT, () => {
-  logger.info(`Server is running on port ${PORT}`);
+https.createServer(httpsOptions, app).listen(PORT, '0.0.0.0', () => {
+  logger.info(`HTTPS Server is running on port ${PORT}`);
 });
 
 // Sincronizar modelos
 const User = require('./models/User');
-const UserInstitutionalStatus = require('./models/UserInstitutionalStatus');
 const Institution = require('./models/Institution');
 const EducationalSite = require('./models/EducationalSite');
+const Post = require('./models/Post');
+const Comment = require('./models/Comment');
+const Like = require('./models/Like');
 
 sequelize.sync().then(() => {
   console.log('PostgreSQL synchronized');

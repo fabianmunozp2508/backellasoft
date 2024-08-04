@@ -1,4 +1,3 @@
-// src/config/db_postgres.js
 const { Sequelize } = require('sequelize');
 const config = require('config');
 
@@ -6,7 +5,7 @@ const db = config.get('postgresURI');
 
 const sequelize = new Sequelize(db, {
   dialect: 'postgres',
-  logging: false, // Cambiar a true para ver los logs SQL
+  logging: false // Cambiar a true para ver los logs SQL
 });
 
 sequelize.authenticate()

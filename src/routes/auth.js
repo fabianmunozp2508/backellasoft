@@ -4,12 +4,11 @@ const { check, validationResult } = require('express-validator');
 const authController = require('../controllers/authController');
 const auth = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
-const tenantMiddleware = require('../middleware/tenantMiddleware');
 
 // Configurar la limitación de tasa de solicitudes
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100, // Limitar cada IP a 5 solicitudes por ventana de 15 minutos
+  max: 100, // Limitar cada IP a 100 solicitudes por ventana de 15 minutos
   message: 'Too many login attempts, please try again later'
 });
 
@@ -19,7 +18,6 @@ const loginLimiter = rateLimit({
 router.post(
   '/login',
   loginLimiter,
-  tenantMiddleware,
   [
     check('email').isEmail().withMessage('Please include a valid email').normalizeEmail(),
     check('password').exists().withMessage('Password is required').trim().escape()
@@ -44,5 +42,9 @@ router.get('/renew', auth, authController.renewToken);
 // @access  Private
 router.get('/status', auth, authController.checkTokenStatus);
 
+// @route   GET /api/auth/check-connection
+// @desc    Check database connection
+// @access  Public
+router.get('/check-connection', authController.checkConnection);
 
 module.exports = router;

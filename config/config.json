@@ -1,0 +1,10 @@
+{
+  "development": {
+    "username": "ellasoft_uno",
+    "password": "S3cur3P@ssw0rd!",
+    "database": "ellasoft",
+    "host": "localhost",
+    "port": 5433,
+    "dialect": "postgres"
+  }
+}

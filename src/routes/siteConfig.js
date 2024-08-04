@@ -4,7 +4,7 @@ const institutionController = require('../controllers/institutionController');
 const auth = require('../middleware/auth'); // Middleware de autenticación
 const tenantMiddleware = require('../middleware/tenantMiddleware'); // Middleware para manejo de tenant
 
-router.post('/institution', auth, tenantMiddleware, institutionController.createInstitution);
+router.post('/institution', auth, tenantMiddleware, institutionController.createOrUpdateInstitution);
 router.get('/institution', auth, tenantMiddleware, institutionController.getInstitution);
 router.put('/institution', auth, tenantMiddleware, institutionController.updateInstitution);
 router.delete('/institution', auth, tenantMiddleware, institutionController.deleteInstitution);
